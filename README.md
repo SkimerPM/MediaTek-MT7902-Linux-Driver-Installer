@@ -6,7 +6,7 @@ This fix has been verified and is confirmed working on:
 * **Brand:** ASUS
 * **Model:** Vivobook Go (E1404FA)
 * **Chipset:** MediaTek MT7902 (WiFi 6E / Filogic 310)
-* **Kernel Version:** 6.12 – 7.x
+* **Kernel Version:** 6.12 – 7.x (including full support for 7.0 API changes)
 * **OS:** Ubuntu 24.04, EndeavourOS (Arch-based), and similar distros
 
 ---

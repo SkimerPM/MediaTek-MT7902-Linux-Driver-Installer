@@ -1,3 +1,4 @@
+#include <linux/version.h>
 /* SPDX-License-Identifier: BSD-3-Clause-Clear */
 /*
  * Copyright (C) 2016 Felix Fietkau <nbd@nbd.name>
@@ -1575,8 +1576,13 @@ int mt76_get_min_avg_rssi(struct mt76_dev *dev, u8 phy_idx);
 
 s8 mt76_get_power_bound(struct mt76_phy *phy, s8 txpower);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
+int mt76_get_txpower(struct ieee80211_hw *hw, struct ieee80211_vif *vif, unsigned int link_id,
+		     int *dbm);
+#else
 int mt76_get_txpower(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 		     int *dbm);
+#endif
 int mt76_init_sar_power(struct ieee80211_hw *hw,
 			const struct cfg80211_sar_specs *sar);
 int mt76_get_sar_power(struct mt76_phy *phy,
@@ -1586,8 +1592,13 @@ int mt76_get_sar_power(struct mt76_phy *phy,
 void mt76_csa_check(struct mt76_dev *dev);
 void mt76_csa_finish(struct mt76_dev *dev);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
+int mt76_get_antenna(struct ieee80211_hw *hw, int radio_idx, u32 *tx_ant,
+		     u32 *rx_ant);
+#else
 int mt76_get_antenna(struct ieee80211_hw *hw, u32 *tx_ant,
 		     u32 *rx_ant);
+#endif
 int mt76_set_tim(struct ieee80211_hw *hw, struct ieee80211_sta *sta, bool set);
 void mt76_insert_ccmp_hdr(struct sk_buff *skb, u8 key_id);
 int mt76_get_rate(struct mt76_dev *dev,

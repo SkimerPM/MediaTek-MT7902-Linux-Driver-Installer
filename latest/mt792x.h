@@ -1,3 +1,4 @@
+#include <linux/version.h>
 /* SPDX-License-Identifier: BSD-3-Clause-Clear */
 /* Copyright (C) 2023 MediaTek Inc. */
 
@@ -415,8 +416,13 @@ void mt792x_sta_statistics(struct ieee80211_hw *hw,
 			   struct ieee80211_vif *vif,
 			   struct ieee80211_sta *sta,
 			   struct station_info *sinfo);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
+void mt792x_set_coverage_class(struct ieee80211_hw *hw, int radio_idx,
+			       s16 coverage_class);
+#else
 void mt792x_set_coverage_class(struct ieee80211_hw *hw,
 			       s16 coverage_class);
+#endif
 void mt792x_dma_cleanup(struct mt792x_dev *dev);
 int mt792x_dma_enable(struct mt792x_dev *dev);
 int mt792x_wpdma_reset(struct mt792x_dev *dev, bool force);
