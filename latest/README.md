@@ -42,7 +42,7 @@ Clone this repository and install using DKMS:
 
 ```bash
 # Clone the repository
-git clone https://github.com/SkimerPM/MediaTek-MT7902-WiFi-Driver-for-Linux-Kernel-6.12-.git mt7902-wifi-1.0
+git clone https://github.com/SkimerPM/MediaTek-MT7902-Linux-Driver-Installer.git mt7902-wifi-1.0
 cd mt7902-wifi-1.0
 
 # Copy to the system source directory

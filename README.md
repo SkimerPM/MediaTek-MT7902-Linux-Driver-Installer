@@ -16,8 +16,8 @@ If you want to quickly fix your WiFi and Bluetooth on any modern kernel, follow 
 
 1. **Open your terminal** and clone the repository:
    ```bash
-   git clone --depth 1 https://github.com/SkimerPM/MediaTek-MT7902-WiFi-Driver-for-Linux-Kernel-6.12-
-   cd MediaTek-MT7902-WiFi-Driver-for-Linux-Kernel-6.12-
+   git clone --depth 1 https://github.com/SkimerPM/MediaTek-MT7902-Linux-Driver-Installer
+   cd MediaTek-MT7902-Linux-Driver-Installer
    ```
 
 2. **Give the script execution permission:**
@@ -48,8 +48,8 @@ Si quieres arreglar rápidamente tu WiFi y Bluetooth en cualquier kernel moderno
 
 1. **Abre tu terminal** y clona el repositorio:
    ```bash
-   git clone --depth 1 https://github.com/SkimerPM/MediaTek-MT7902-WiFi-Driver-for-Linux-Kernel-6.12-
-   cd MediaTek-MT7902-WiFi-Driver-for-Linux-Kernel-6.12-
+   git clone --depth 1 https://github.com/SkimerPM/MediaTek-MT7902-Linux-Driver-Installer
+   cd MediaTek-MT7902-Linux-Driver-Installer
    ```
 
 2. **Dale permisos de ejecución al script:**
