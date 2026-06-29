@@ -243,6 +243,10 @@ configure_regdom() {
     echo "options cfg80211 ieee80211_regdom=$country" > /etc/modprobe.d/cfg80211.conf
     success "cfg80211 module option set (ensures domain loads with WiFi driver)."
 
+    # Disable ASPM for mt7921e (drastically reduces ping latency)
+    echo "options mt7921e disable_aspm=y" > /etc/modprobe.d/mt7921e.conf
+    success "PCI Active State Power Management (ASPM) disabled for mt7921e (improves latency)."
+
     COUNTRY_CODE="$country"
 }
 

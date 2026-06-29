@@ -235,6 +235,10 @@ configurar_dominio() {
     echo "options cfg80211 ieee80211_regdom=$pais" > /etc/modprobe.d/cfg80211.conf
     exito "Opción de módulo cfg80211 configurada (el dominio carga junto con el driver WiFi)."
 
+    # Desactivar ASPM para mt7921e (reduce drásticamente la latencia)
+    echo "options mt7921e disable_aspm=y" > /etc/modprobe.d/mt7921e.conf
+    exito "Ahorro de energía PCI (ASPM) desactivado para mt7921e (mejora de latencia)."
+
     CODIGO_PAIS="$pais"
 }
 
