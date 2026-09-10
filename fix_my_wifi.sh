@@ -1,17 +1,17 @@
 #!/bin/bash
 # ============================================================
-#  🎯 MT7902 WiFi & Bluetooth — Universal Installer v2.0
+#  MT7902 WiFi & Bluetooth -- Universal Installer v2.0
 # ============================================================
 #  Supports: Debian / Ubuntu / Mint  AND  Arch / Manjaro /
 #            EndeavourOS / CachyOS / Garuda
 #
 #  FEATURES:
-#   ✅ DKMS — driver survives kernel updates automatically
-#   ✅ WiFi regulatory domain (country code) for max signal
-#   ✅ Bluetooth patched modules (btusb + btmtk)
-#   ✅ BT firmware conflict resolution
-#   ✅ Post-install verification
-#   ✅ Uninstall mode (--uninstall)
+#   - DKMS: driver survives kernel updates automatically
+#   - WiFi regulatory domain (country code) for max signal
+#   - Bluetooth patched modules (btusb + btmtk)
+#   - BT firmware conflict resolution
+#   - Post-install verification
+#   - Uninstall mode (--uninstall)
 #
 #  USAGE:
 #   sudo bash fix_my_wifi.sh              (interactive)
@@ -25,15 +25,72 @@
 
 set -euo pipefail
 
-# ── Colors ──────────────────────────────────────────────────
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
-CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
+# ── Style (black & white) ────────────────────────────────────
+BOLD='\033[1m'
+DIM='\033[2m'
+RESET='\033[0m'
 
-info()    { echo -e "${CYAN}ℹ️  $*${RESET}"; }
-success() { echo -e "${GREEN}✅ $*${RESET}"; }
-warn()    { echo -e "${YELLOW}⚠️  $*${RESET}"; }
-error()   { echo -e "${RED}❌ $*${RESET}" >&2; exit 1; }
-step()    { echo -e "\n${BOLD}${CYAN}▶ $*${RESET}"; }
+info()    { echo -e "  ::  $*"; }
+success() { echo -e "  =>  $*"; }
+warn()    { echo -e "  ~~  $*"; }
+error()   { echo -e "\n  !!  $*\n" >&2; exit 1; }
+step()    { echo -e "\n${BOLD}  >>  $*${RESET}"; }
+
+# ── Banner ───────────────────────────────────────────────────
+show_banner() {
+    local kver distro arch
+    kver=$(uname -r)
+    arch=$(uname -m)
+    distro=$(grep -E '^PRETTY_NAME=' /etc/os-release 2>/dev/null \
+             | cut -d= -f2 | tr -d '"' || echo "Unknown")
+
+    echo ""
+    echo -e "${BOLD}  +$(printf '=%.0s' {1..62})+${RESET}"
+    echo -e "${BOLD}  |$(printf ' %.0s' {1..62})|${RESET}"
+    printf "${BOLD}  |%-62s|\n${RESET}" "       MT7902  WiFi & Bluetooth  Installer  v2.0"
+    printf "${BOLD}  |%-62s|\n${RESET}" "       github.com/SkimerPM"
+    echo -e "${BOLD}  |$(printf ' %.0s' {1..62})|${RESET}"
+    echo -e "${BOLD}  +$(printf '=%.0s' {1..62})+${RESET}"
+    printf "${BOLD}  |  %-10s: %-47s |\n${RESET}" "Kernel" "$kver"
+    printf "${BOLD}  |  %-10s: %-47s |\n${RESET}" "Distro" "$distro"
+    printf "${BOLD}  |  %-10s: %-47s |\n${RESET}" "Arch" "$arch"
+    echo -e "${BOLD}  +$(printf '=%.0s' {1..62})+${RESET}"
+    echo ""
+}
+
+# ── Spinner for long-running commands ────────────────────────
+# Usage: run_with_spinner "message" command [args...]
+run_with_spinner() {
+    local msg="$1"; shift
+    local spin='-\|/'
+    local i=0 start=$SECONDS
+
+    "$@" &>/tmp/mt7902_build.log &
+    local pid=$!
+
+    while kill -0 "$pid" 2>/dev/null; do
+        local elapsed=$(( SECONDS - start ))
+        printf "\r${BOLD}  >>  %-40s  [%s]  %02d:%02d${RESET}" \
+            "$msg" "${spin:$i:1}" "$(( elapsed/60 ))" "$(( elapsed%60 ))"
+        i=$(( (i+1) % 4 ))
+        sleep 0.15
+    done
+
+    wait "$pid"
+    local code=$?
+    local elapsed=$(( SECONDS - start ))
+
+    if [[ $code -eq 0 ]]; then
+        printf "\r  =>  %-40s  [done]  %02d:%02d\n" \
+            "$msg" "$(( elapsed/60 ))" "$(( elapsed%60 ))"
+    else
+        printf "\r  !!  %-40s  [fail]  %02d:%02d\n" \
+            "$msg" "$(( elapsed/60 ))" "$(( elapsed%60 ))"
+        echo ""
+        cat /tmp/mt7902_build.log >&2
+        return $code
+    fi
+}
 
 # ── Sanity checks ────────────────────────────────────────────
 [[ $EUID -ne 0 ]] && error "Run this script with sudo: sudo bash $0"
@@ -405,13 +462,19 @@ DKMSEOF
 
     info "Building module (this may take 1-3 minutes)..."
     if $IS_CACHYOS; then
-        CC=clang LD=ld.lld dkms build -m "$MODULE" -v "$VERSION"
+        run_with_spinner "Compiling modules" \
+            bash -c "CC=clang LD=ld.lld dkms build -m '$MODULE' -v '$VERSION'" \
+            || error "DKMS build failed. Check /tmp/mt7902_build.log"
     else
-        dkms build -m "$MODULE" -v "$VERSION"
+        run_with_spinner "Compiling modules" \
+            dkms build -m "$MODULE" -v "$VERSION" \
+            || error "DKMS build failed. Check /tmp/mt7902_build.log"
     fi
 
     info "Installing compiled modules..."
-    dkms install -m "$MODULE" -v "$VERSION"
+    run_with_spinner "Installing modules" \
+        dkms install -m "$MODULE" -v "$VERSION" \
+        || error "DKMS install failed. Check /tmp/mt7902_build.log"
 
     success "DKMS installation complete. Modules will auto-recompile on kernel updates."
 }
@@ -514,9 +577,17 @@ verify_install() {
 #  MAIN
 # ════════════════════════════════════════════════════════════
 echo ""
-echo -e "${BOLD}${CYAN}╔══════════════════════════════════════════════╗${RESET}"
-echo -e "${BOLD}${CYAN}║   MT7902 WiFi & Bluetooth — Installer v2.0  ║${RESET}"
-echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════════╝${RESET}"
+echo -e "${BOLD}  +$(printf '=%.0s' {1..62})+${RESET}"
+echo -e "${BOLD}  |$(printf ' %.0s' {1..62})|${RESET}"
+printf "${BOLD}  |%-62s|\n${RESET}" "       MT7902  WiFi & Bluetooth  Installer  v2.0"
+printf "${BOLD}  |%-62s|\n${RESET}" "       github.com/SkimerPM"
+echo -e "${BOLD}  |$(printf ' %.0s' {1..62})|${RESET}"
+echo -e "${BOLD}  +$(printf '=%.0s' {1..62})+${RESET}"
+printf "${BOLD}  |  %-10s: %-47s |\n${RESET}" "Kernel" "$(uname -r)"
+printf "${BOLD}  |  %-10s: %-47s |\n${RESET}" "Distro" \
+    "$(grep -E '^PRETTY_NAME=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"' || echo 'Unknown')"
+printf "${BOLD}  |  %-10s: %-47s |\n${RESET}" "Arch" "$(uname -m)"
+echo -e "${BOLD}  +$(printf '=%.0s' {1..62})+${RESET}"
 echo ""
 
 detect_distro
