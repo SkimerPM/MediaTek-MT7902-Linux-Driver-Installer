@@ -118,6 +118,10 @@ do_uninstall() {
     # Legacy custom modules dir
     rm -rf /lib/modules/mt7902_custom
 
+    # WiFi optimization configs
+    rm -f /etc/NetworkManager/conf.d/wifi-powersave-off.conf 2>/dev/null || true
+    rm -f /etc/modprobe.d/mt7921e.conf 2>/dev/null || true
+
     # Regulatory domain
     if [[ -f /etc/conf.d/wireless-regdom ]]; then
         warn "Keeping /etc/conf.d/wireless-regdom (regulatory domain). Remove manually if needed."
@@ -246,6 +250,25 @@ configure_regdom() {
     # Disable ASPM for mt7921e (drastically reduces ping latency)
     echo "options mt7921e disable_aspm=y" > /etc/modprobe.d/mt7921e.conf
     success "PCI Active State Power Management (ASPM) disabled for mt7921e (improves latency)."
+
+    # Disable WiFi powersave via NetworkManager (reduces connection latency)
+    # wifi.powersave = 2 → disabled  |  3 → enabled (NM default)
+    if command -v nmcli &>/dev/null || [[ -d /etc/NetworkManager ]]; then
+        mkdir -p /etc/NetworkManager/conf.d
+        cat > /etc/NetworkManager/conf.d/wifi-powersave-off.conf <<'NMEOF'
+[connection]
+# Disable WiFi power saving to reduce connection latency (MT7902)
+# 2 = disable, 3 = enable (NetworkManager default)
+wifi.powersave = 2
+NMEOF
+        # Apply immediately if NM is already running
+        if nmcli -t -f RUNNING general 2>/dev/null | grep -q "running"; then
+            nmcli radio wifi off 2>/dev/null && sleep 1 && nmcli radio wifi on 2>/dev/null || true
+        fi
+        success "WiFi powersave disabled via NetworkManager (/etc/NetworkManager/conf.d/wifi-powersave-off.conf)."
+    else
+        warn "NetworkManager not found — skipping WiFi powersave config."
+    fi
 
     COUNTRY_CODE="$country"
 }
@@ -472,6 +495,14 @@ verify_install() {
         && success "BT firmware: OK" || warn "BT firmware not found"
 
     echo ""
+    info "── WiFi powersave ───────────────────────────"
+    if [[ -f /etc/NetworkManager/conf.d/wifi-powersave-off.conf ]]; then
+        success "WiFi powersave: disabled (NM config present)"
+    else
+        warn "WiFi powersave config not found"
+    fi
+
+    echo ""
     if $ok; then
         success "Installation looks good! 🎉"
     else
@@ -507,8 +538,8 @@ echo ""
 read -rp "Continue? [Y/n]: " confirm
 [[ "${confirm,,}" == "n" ]] && { info "Cancelled."; exit 0; }
 
-install_dependencies
-configure_domain
+install_deps
+configure_regdom
 install_firmwares
 install_dkms
 load_modules_now
