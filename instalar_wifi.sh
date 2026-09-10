@@ -116,6 +116,10 @@ hacer_desinstalacion() {
     rm -f /usr/local/bin/mt7902-setup.sh
     rm -rf /lib/modules/mt7902_custom
 
+    # Configuraciones de optimización WiFi
+    rm -f /etc/NetworkManager/conf.d/wifi-powersave-off.conf 2>/dev/null || true
+    rm -f /etc/modprobe.d/mt7921e.conf 2>/dev/null || true
+
     aviso "Se conserva la configuración de dominio regulatorio. Elimínala manualmente si lo deseas."
     exito "Desinstalación completa. Reinicia el sistema si hay problemas."
     exit 0
@@ -238,6 +242,25 @@ configurar_dominio() {
     # Desactivar ASPM para mt7921e (reduce drásticamente la latencia)
     echo "options mt7921e disable_aspm=y" > /etc/modprobe.d/mt7921e.conf
     exito "Ahorro de energía PCI (ASPM) desactivado para mt7921e (mejora de latencia)."
+
+    # Desactivar ahorro de energía WiFi via NetworkManager (reduce latencia de conexión)
+    # wifi.powersave = 2 → deshabilitado  |  3 → habilitado (valor por defecto de NM)
+    if command -v nmcli &>/dev/null || [[ -d /etc/NetworkManager ]]; then
+        mkdir -p /etc/NetworkManager/conf.d
+        cat > /etc/NetworkManager/conf.d/wifi-powersave-off.conf <<'NMEOF'
+[connection]
+# Deshabilita el ahorro de energía WiFi para reducir la latencia de conexión (MT7902)
+# 2 = deshabilitado, 3 = habilitado (valor por defecto de NetworkManager)
+wifi.powersave = 2
+NMEOF
+        # Aplicar inmediatamente si NM ya está corriendo
+        if nmcli -t -f RUNNING general 2>/dev/null | grep -q "running"; then
+            nmcli radio wifi off 2>/dev/null && sleep 1 && nmcli radio wifi on 2>/dev/null || true
+        fi
+        exito "Ahorro de energía WiFi deshabilitado via NetworkManager (/etc/NetworkManager/conf.d/wifi-powersave-off.conf)."
+    else
+        aviso "NetworkManager no encontrado — omitiendo configuración de powersave WiFi."
+    fi
 
     CODIGO_PAIS="$pais"
 }
@@ -456,6 +479,13 @@ verificar_instalacion() {
         && exito "Firmware WiFi: OK" || aviso "Firmware WiFi no encontrado"
     ls /lib/firmware/mediatek/BT_RAM_CODE_MT7902*.bin* 2>/dev/null \
         && exito "Firmware Bluetooth: OK" || aviso "Firmware BT no encontrado"
+    echo ""
+    info "── Ahorro de energía WiFi ───────────────────────────"
+    if [[ -f /etc/NetworkManager/conf.d/wifi-powersave-off.conf ]]; then
+        exito "WiFi powersave: deshabilitado (configuración NM presente)"
+    else
+        aviso "Configuración de powersave WiFi no encontrada"
+    fi
 }
 
 # ════════════════════════════════════════════════════════════
